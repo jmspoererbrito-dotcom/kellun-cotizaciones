@@ -1,13 +1,15 @@
 const https = require("https");
 
+const ACCESS_TOKEN = "APP_USR-283175851368664-052817-1552ec819758dddd3b2c1a364bcb4142-1206373225";
+
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { 
-      headers: { 
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        "Accept": "application/json",
-        "Accept-Language": "es-CL,es;q=0.9"
-      } 
+    https.get(url, {
+      headers: {
+        "Authorization": "Bearer " + ACCESS_TOKEN,
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+      }
     }, (res) => {
       let data = "";
       res.on("data", chunk => data += chunk);
@@ -36,15 +38,13 @@ function fetchImageAsBase64(url) {
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  const itemId = req.query.id;
+  const itemId = (req.query.id || "").replace("-", "").toUpperCase();
   if (!itemId) return res.status(400).json({ error: "Falta el ID" });
 
   try {
-    const cleanId = itemId.replace("-","").toUpperCase();
-
     const [data, pics] = await Promise.all([
-      fetchJSON(`https://api.mercadolibre.com/items/${cleanId}`),
-      fetchJSON(`https://api.mercadolibre.com/items/${cleanId}/pictures`).catch(() => [])
+      fetchJSON(`https://api.mercadolibre.com/items/${itemId}`),
+      fetchJSON(`https://api.mercadolibre.com/items/${itemId}/pictures`).catch(() => [])
     ]);
 
     if (!data || !data.id) return res.status(404).json({ error: "Item no encontrado", detalle: data });
