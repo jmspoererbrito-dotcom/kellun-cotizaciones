@@ -60,12 +60,15 @@ module.exports = async (req, res) => {
 
   try {
     const tokenData = await getToken();
+    if (!tokenData.access_token) return res.status(500).json({ error: "Token fallido", detalle: tokenData });
     const token = tokenData.access_token;
 
     const [data, pics] = await Promise.all([
       fetchJSON(`https://api.mercadolibre.com/items/${itemId}`, token),
       fetchJSON(`https://api.mercadolibre.com/items/${itemId}/pictures`, token).catch(() => [])
     ]);
+
+    if (!data || !data.id) return res.status(500).json({ error: "Item no encontrado", detalle: data });
 
     const attrs = {};
     (data.attributes || []).forEach(a => attrs[a.id] = a.value_name);
@@ -96,6 +99,7 @@ module.exports = async (req, res) => {
     if (t.includes("studio")) tags.push("Studio");
 
     res.json({ titulo: data.title || "", direccion: addr, m2, dorm, banos, precio_uf, precio_clp, foto, tags });
+
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
