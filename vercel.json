@@ -2,10 +2,11 @@
   "version": 2,
   "builds": [
     { "src": "public/index.html", "use": "@vercel/static" },
-    { "src": "api/ml.js", "use": "@vercel/node" }
+    { "src": "api/*.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/ml", "dest": "/api/ml.js" },
+    { "src": "/api/token", "dest": "/api/token.js" },
     { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
