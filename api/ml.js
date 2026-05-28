@@ -1,37 +1,18 @@
 const https = require("https");
 
-const CLIENT_ID = "283175851368664";
-const CLIENT_SECRET = "LrmhZgdhuuwlZAxseZcakhBVSTgHvl2i";
-
-function fetchJSON(url, token) {
+function fetchJSON(url) {
   return new Promise((resolve, reject) => {
-    const headers = { "User-Agent": "Mozilla/5.0", "Accept": "application/json" };
-    if (token) headers["Authorization"] = "Bearer " + token;
-    https.get(url, { headers }, (res) => {
+    https.get(url, { 
+      headers: { 
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "application/json",
+        "Accept-Language": "es-CL,es;q=0.9"
+      } 
+    }, (res) => {
       let data = "";
       res.on("data", chunk => data += chunk);
       res.on("end", () => { try { resolve(JSON.parse(data)); } catch(e) { reject(e); } });
     }).on("error", reject);
-  });
-}
-
-async function getToken() {
-  return new Promise((resolve, reject) => {
-    const body = `grant_type=client_credentials&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}`;
-    const options = {
-      hostname: "api.mercadolibre.com",
-      path: "/oauth/token",
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" }
-    };
-    const req = https.request(options, (res) => {
-      let data = "";
-      res.on("data", chunk => data += chunk);
-      res.on("end", () => { try { resolve(JSON.parse(data)); } catch(e) { reject(e); } });
-    });
-    req.on("error", reject);
-    req.write(body);
-    req.end();
   });
 }
 
@@ -59,16 +40,14 @@ module.exports = async (req, res) => {
   if (!itemId) return res.status(400).json({ error: "Falta el ID" });
 
   try {
-    const tokenData = await getToken();
-    if (!tokenData.access_token) return res.status(500).json({ error: "Token fallido", detalle: tokenData });
-    const token = tokenData.access_token;
+    const cleanId = itemId.replace("-","").toUpperCase();
 
     const [data, pics] = await Promise.all([
-      fetchJSON(`https://api.mercadolibre.com/items/${itemId}`, token),
-      fetchJSON(`https://api.mercadolibre.com/items/${itemId}/pictures`, token).catch(() => [])
+      fetchJSON(`https://api.mercadolibre.com/items/${cleanId}`),
+      fetchJSON(`https://api.mercadolibre.com/items/${cleanId}/pictures`).catch(() => [])
     ]);
 
-    if (!data || !data.id) return res.status(500).json({ error: "Item no encontrado", detalle: data });
+    if (!data || !data.id) return res.status(404).json({ error: "Item no encontrado", detalle: data });
 
     const attrs = {};
     (data.attributes || []).forEach(a => attrs[a.id] = a.value_name);
