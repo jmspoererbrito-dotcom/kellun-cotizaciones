@@ -1,5 +1,11 @@
 {
-  "rewrites": [
-    { "source": "/api/ml", "destination": "/api/ml.js" }
+  "version": 2,
+  "builds": [
+    { "src": "public/index.html", "use": "@vercel/static" },
+    { "src": "api/ml.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/ml", "dest": "/api/ml.js" },
+    { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
