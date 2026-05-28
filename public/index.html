@@ -183,7 +183,7 @@ async function fetchML(){
   setBtnLoading(true);
 
   try {
-    const res = await fetch(`/api/ml/${itemId}`);
+    const res = await fetch(`/api/ml?id=${itemId}`);
     const data = await res.json();
     if(!res.ok) throw new Error(data.error||"Error desconocido");
 

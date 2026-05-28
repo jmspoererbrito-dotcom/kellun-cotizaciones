@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/ml", "destination": "/api/ml.js" }
+  ]
+}
