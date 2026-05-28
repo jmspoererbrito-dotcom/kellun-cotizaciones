@@ -5,11 +5,26 @@ function fetchJSON(url) {
     https.get(url, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" } }, (res) => {
       let data = "";
       res.on("data", chunk => data += chunk);
-      res.on("end", () => {
-        try { resolve(JSON.parse(data)); }
-        catch(e) { reject(new Error("JSON parse error")); }
-      });
+      res.on("end", () => { try { resolve(JSON.parse(data)); } catch(e) { reject(e); } });
     }).on("error", reject);
+  });
+}
+
+function fetchImageAsBase64(url) {
+  return new Promise((resolve) => {
+    const proto = url.startsWith("https") ? https : require("http");
+    proto.get(url, { headers: { "User-Agent": "Mozilla/5.0", "Referer": "https://www.mercadolibre.cl" } }, (res) => {
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        return fetchImageAsBase64(res.headers.location).then(resolve).catch(() => resolve(null));
+      }
+      const chunks = [];
+      res.on("data", chunk => chunks.push(chunk));
+      res.on("end", () => {
+        const buffer = Buffer.concat(chunks);
+        const contentType = res.headers["content-type"] || "image/jpeg";
+        resolve(`data:${contentType};base64,${buffer.toString("base64")}`);
+      });
+    }).on("error", () => resolve(null));
   });
 }
 
@@ -36,7 +51,12 @@ module.exports = async (req, res) => {
     else if (data.currency_id === "CLP") precio_clp = Number(data.price).toLocaleString("es-CL");
 
     const addr = [data.location?.address_line, data.location?.neighborhood?.name, data.location?.city?.name].filter(Boolean).join(", ");
-    const foto = (Array.isArray(pics) && pics[0]?.url) ? pics[0].url.replace("http://", "https://") : (data.thumbnail || "").replace("http://", "https://");
+
+    let fotoUrl = (Array.isArray(pics) && pics[0]?.url)
+      ? pics[0].url.replace("http://", "https://")
+      : (data.thumbnail || "").replace("-I.jpg", "-O.jpg").replace("http://", "https://");
+
+    const foto = fotoUrl ? await fetchImageAsBase64(fotoUrl) : null;
 
     const tags = [];
     if (dorm) tags.push(dorm + "D");
