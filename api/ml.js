@@ -1,12 +1,37 @@
 const https = require("https");
 
-function fetchJSON(url) {
+const CLIENT_ID = "283175851368664";
+const CLIENT_SECRET = "LrmhZgdhuuwlZAxseZcakhBVSTgHvl2i";
+
+function fetchJSON(url, token) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" } }, (res) => {
+    const headers = { "User-Agent": "Mozilla/5.0", "Accept": "application/json" };
+    if (token) headers["Authorization"] = "Bearer " + token;
+    https.get(url, { headers }, (res) => {
       let data = "";
       res.on("data", chunk => data += chunk);
       res.on("end", () => { try { resolve(JSON.parse(data)); } catch(e) { reject(e); } });
     }).on("error", reject);
+  });
+}
+
+async function getToken() {
+  return new Promise((resolve, reject) => {
+    const body = `grant_type=client_credentials&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}`;
+    const options = {
+      hostname: "api.mercadolibre.com",
+      path: "/oauth/token",
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" }
+    };
+    const req = https.request(options, (res) => {
+      let data = "";
+      res.on("data", chunk => data += chunk);
+      res.on("end", () => { try { resolve(JSON.parse(data)); } catch(e) { reject(e); } });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
   });
 }
 
@@ -34,9 +59,12 @@ module.exports = async (req, res) => {
   if (!itemId) return res.status(400).json({ error: "Falta el ID" });
 
   try {
+    const tokenData = await getToken();
+    const token = tokenData.access_token;
+
     const [data, pics] = await Promise.all([
-      fetchJSON(`https://api.mercadolibre.com/items/${itemId}`),
-      fetchJSON(`https://api.mercadolibre.com/items/${itemId}/pictures`).catch(() => [])
+      fetchJSON(`https://api.mercadolibre.com/items/${itemId}`, token),
+      fetchJSON(`https://api.mercadolibre.com/items/${itemId}/pictures`, token).catch(() => [])
     ]);
 
     const attrs = {};
@@ -67,7 +95,7 @@ module.exports = async (req, res) => {
     if (t.includes("uss")) tags.push("Cerca USS");
     if (t.includes("studio")) tags.push("Studio");
 
-    res.json({ titulo: data.title || "", direccion: addr, m2, dorm, banos, precio_uf, precio_clp, foto, tags, permalink: data.permalink || "" });
+    res.json({ titulo: data.title || "", direccion: addr, m2, dorm, banos, precio_uf, precio_clp, foto, tags });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
