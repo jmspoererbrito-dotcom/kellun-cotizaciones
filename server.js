@@ -18,6 +18,18 @@ app.get("/api/tienda", async (req, res) => {
       waitUntil: "networkidle2", timeout: 30000
     });
 
+    // Scroll para cargar todas las propiedades
+    let prevCount = 0;
+    for (let i = 0; i < 10; i++) {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await new Promise(r => setTimeout(r, 2000));
+      const count = await page.evaluate(() => 
+        document.querySelectorAll(".andes-card, [class*='property-card'], [class*='listing-item'], .ui-search-result").length
+      );
+      if (count === prevCount) break;
+      prevCount = count;
+    }
+
     const propiedades = await page.evaluate(() => {
       const items = document.querySelectorAll(".andes-card, [class*='property-card'], [class*='listing-item'], .ui-search-result");
       const results = [];
